@@ -48,8 +48,10 @@ class App(customtkinter.CTk):
                         foreground=fg_color,
                         fieldbackground=bg_color,
                         bordercolor=bg_color,
-                        borderwidth=0,
-                        font=("Arial", 10))
+                        borderwidth=1,
+                        relief="solid",
+                        rowheight=50,
+                        font=("Arial", 20))
 
         style.map('Treeview', background=[('selected', selected_bg)])
 
@@ -68,7 +70,7 @@ class App(customtkinter.CTk):
 
         # Configure columns
         for col in self.columns:
-            self.tree.heading(col, text=col)
+            self.tree.heading(col, text=col, command=lambda c=col: self.sort_column(c, False))
             self.tree.column(col, width=120, anchor="w")
 
         self.tree.column("Name", width=300)
@@ -76,6 +78,17 @@ class App(customtkinter.CTk):
         self.tree.pack(side="left", fill="both", expand=True)
 
         self.scrollbar.configure(command=self.tree.yview)
+
+    def sort_column(self, col, reverse):
+        l = [(self.tree.set(k, col), k) for k in self.tree.get_children('')]
+        l.sort(reverse=reverse)
+
+        # Rearrange items in sorted positions
+        for index, (val, k) in enumerate(l):
+            self.tree.move(k, '', index)
+
+        # Reverse sort next time
+        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
 
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
