@@ -14,10 +14,37 @@ class MediaItem:
     season: Optional[str] = None
     path: str = ""
     is_airing: bool = False
+    avg_size_gb: float = 0.0
 
     def __post_init__(self):
         # Clean up name if needed
         self.name = self.name.strip()
+
+VIDEO_EXTENSIONS = {'.mkv', '.mp4', '.avi', '.mov', '.wmv', '.flv', '.webm', '.m4v', '.ts', '.m2ts'}
+
+def calculate_average_size(folder_path: str) -> float:
+    total_size = 0
+    count = 0
+    try:
+        if not os.path.exists(folder_path):
+            return 0.0
+
+        with os.scandir(folder_path) as entries:
+            for entry in entries:
+                if entry.is_file():
+                    _, ext = os.path.splitext(entry.name)
+                    if ext.lower() in VIDEO_EXTENSIONS:
+                        total_size += entry.stat().st_size
+                        count += 1
+    except OSError as e:
+        print(f"Error scanning files in {folder_path}: {e}")
+        return 0.0
+
+    if count == 0:
+        return 0.0
+
+    avg_bytes = total_size / count
+    return avg_bytes / (1024 * 1024 * 1024)  # Convert to GB
 
 class MediaParser:
     # Compile regexes for heuristic matching
@@ -157,6 +184,7 @@ class LibraryScanner:
                             if sub.is_dir() and sub.name.lower().startswith("season"):
                                 has_seasons = True
                                 season_item = MediaParser.parse_season_override(sub.name, parent_item, sub.path)
+                                season_item.avg_size_gb = calculate_average_size(season_item.path)
                                 items.append(season_item)
                     except OSError:
                         pass # Permission issue or not a dir
@@ -164,6 +192,7 @@ class LibraryScanner:
                     # If no seasons found, add the parent item itself as the entry (Movie or Show without season folders)
                     if not has_seasons:
                         # Only add if it's not empty? Or assume valid?
+                        parent_item.avg_size_gb = calculate_average_size(parent_item.path)
                         items.append(parent_item)
 
         except OSError as e:
