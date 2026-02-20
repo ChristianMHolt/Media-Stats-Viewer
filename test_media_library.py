@@ -65,5 +65,19 @@ class TestMediaParser(unittest.TestCase):
         self.assertEqual(item.source, "BD")
         self.assertEqual(item.video_codec, "H.265")
 
+    def test_parse_season_airing(self):
+        parent = MediaItem("Show", "Group", "1080p", "BD", "H.265", "AC3")
+        season_folder = "Season 04 [Airing]"
+        path = "/test/path/season04"
+
+        item = MediaParser.parse_season_override(season_folder, parent, path)
+
+        self.assertEqual(item.season, "Season 04")
+        self.assertTrue(item.is_airing)
+        self.assertEqual(item.resolution, "Airing")
+        self.assertEqual(item.source, "Airing")
+        self.assertEqual(item.video_codec, "Airing")
+        self.assertEqual(item.audio_codec, "Airing")
+
 if __name__ == '__main__':
     unittest.main()

@@ -79,6 +79,13 @@ class App(customtkinter.CTk):
 
         self.scrollbar.configure(command=self.tree.yview)
 
+        # Configure tags for colors
+        self.tree.tag_configure("green", background="#2e8b57", foreground="white")
+        self.tree.tag_configure("light_green", background="#90ee90", foreground="black")
+        self.tree.tag_configure("blue", background="#4682b4", foreground="white")
+        self.tree.tag_configure("orange", background="#ffa500", foreground="black")
+        self.tree.tag_configure("red", background="#cd5c5c", foreground="white")
+
     def sort_column(self, col, reverse):
         l = [(self.tree.set(k, col), k) for k in self.tree.get_children('')]
         l.sort(reverse=reverse)
@@ -116,9 +123,35 @@ class App(customtkinter.CTk):
         for item in items:
             season_str = item.season if item.season else ""
             values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec)
-            self.tree.insert("", "end", values=values)
+            tag = get_item_tag(item)
+            if tag:
+                self.tree.insert("", "end", values=values, tags=(tag,))
+            else:
+                self.tree.insert("", "end", values=values)
 
         self.status_label.configure(text=f"Scan complete. Found {len(items)} items.")
+
+def get_item_tag(item: MediaItem) -> str:
+    if item.is_airing:
+        return "blue"
+
+    source_norm = item.source.lower().replace("-", " ")
+    video_norm = item.video_codec.lower().replace("-", " ")
+
+    if "web dl" in source_norm:
+            return "red"
+
+    if "bd encode" in source_norm:
+        if "svt av1" in video_norm:
+            return "light_green"
+        else:
+            return "orange"
+
+    if "bd remux" in source_norm or "dvd" in source_norm:
+            if "h.264" in video_norm or "x264" in video_norm or "mpeg2" in video_norm or "mpeg 2" in video_norm:
+                return "green"
+
+    return ""
 
 if __name__ == "__main__":
     customtkinter.set_appearance_mode("Dark")
