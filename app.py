@@ -1,9 +1,28 @@
 import os
 import threading
+import json
 import customtkinter
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from media_library import LibraryScanner, MediaItem
+
+CONFIG_FILE = "config.json"
+
+def load_config():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading config: {e}")
+    return {}
+
+def save_config(data):
+    try:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving config: {e}")
 
 STATUS_RANK = {
     "blue": 1,        # Airing
@@ -46,6 +65,10 @@ class App(customtkinter.CTk):
         super().__init__()
         self.title("Media Library Tracker")
         self.geometry("1100x600")
+
+        # Load Config
+        self.config = load_config()
+        self.verified_items = set(self.config.get("verified_items", []))
 
         # Configure grid
         self.grid_columnconfigure(0, weight=1)
@@ -112,7 +135,7 @@ class App(customtkinter.CTk):
         style.map("Treeview.Heading",
                   background=[('active', '#404040')])
 
-        self.columns = ("Name", "Season", "Group", "Resolution", "Source", "Video", "Audio", "Avg Size (GB)")
+        self.columns = ("Name", "Season", "Group", "Resolution", "Source", "Video", "Audio", "Avg Size (GB)", "Verified")
         self.tree = ttk.Treeview(self.tree_frame, columns=self.columns, show="headings",
                                  yscrollcommand=self.scrollbar.set, selectmode="browse")
 
@@ -123,9 +146,12 @@ class App(customtkinter.CTk):
 
         # Bind Right Click for secondary sort
         self.tree.bind("<Button-3>", self.on_header_right_click)
+        # Bind Left Click for checkboxes
+        self.tree.bind("<Button-1>", self.on_tree_click)
 
         self.tree.column("Name", width=300)
         self.tree.column("Season", width=100)
+        self.tree.column("Verified", width=80, anchor="center")
         self.tree.pack(side="left", fill="both", expand=True)
 
         self.scrollbar.configure(command=self.tree.yview)
@@ -136,6 +162,13 @@ class App(customtkinter.CTk):
         self.tree.tag_configure("blue", background="#4682b4", foreground="white")
         self.tree.tag_configure("orange", background="#ffa500", foreground="black")
         self.tree.tag_configure("red", background="#cd5c5c", foreground="white")
+
+        # Auto-load last library if exists
+        last_lib = self.config.get("last_library_path")
+        if last_lib and os.path.exists(last_lib):
+            self.status_label.configure(text=f"Scanning: {last_lib}...")
+            thread = threading.Thread(target=self.run_scan, args=(last_lib,))
+            thread.start()
 
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
@@ -199,6 +232,10 @@ class App(customtkinter.CTk):
     def select_folder(self):
         folder_selected = filedialog.askdirectory()
         if folder_selected:
+            # Save to config
+            self.config["last_library_path"] = folder_selected
+            save_config(self.config)
+
             self.status_label.configure(text=f"Scanning: {folder_selected}...")
             # Run scan in background thread
             thread = threading.Thread(target=self.run_scan, args=(folder_selected,))
@@ -218,18 +255,56 @@ class App(customtkinter.CTk):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
+        self.row_id_to_path = {}
+
         # Insert new items
         for item in items:
             season_str = item.season if item.season else ""
             avg_size_str = f"{item.avg_size_gb:6.2f} GB"
-            values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec, avg_size_str)
+
+            is_verified = item.path in self.verified_items
+            verified_mark = "☑" if is_verified else "☐"
+
+            values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec, avg_size_str, verified_mark)
             tag = get_item_tag(item)
             if tag:
-                self.tree.insert("", "end", values=values, tags=(tag,))
+                item_id = self.tree.insert("", "end", values=values, tags=(tag,))
             else:
-                self.tree.insert("", "end", values=values)
+                item_id = self.tree.insert("", "end", values=values)
+
+            self.row_id_to_path[item_id] = item.path
 
         self.status_label.configure(text=f"Scan complete. Found {len(items)} items.")
+
+    def on_tree_click(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region == "cell":
+            col_id = self.tree.identify_column(event.x)
+            col_name = self.tree.column(col_id, "id")
+
+            if col_name == "Verified":
+                row_id = self.tree.identify_row(event.y)
+                if not row_id:
+                    return
+
+                path = self.row_id_to_path.get(row_id)
+                if not path:
+                    return
+
+                # Toggle
+                if path in self.verified_items:
+                    self.verified_items.remove(path)
+                    new_val = "☐"
+                else:
+                    self.verified_items.add(path)
+                    new_val = "☑"
+
+                # Update UI
+                self.tree.set(row_id, "Verified", new_val)
+
+                # Save Config
+                self.config["verified_items"] = list(self.verified_items)
+                save_config(self.config)
 
 def get_item_tag(item: MediaItem) -> str:
     if item.is_airing:
