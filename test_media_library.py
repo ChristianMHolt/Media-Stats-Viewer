@@ -1,5 +1,43 @@
 import unittest
-from media_library import MediaItem, MediaParser
+import os
+import shutil
+import tempfile
+from media_library import MediaItem, MediaParser, calculate_average_size
+
+class TestAverageSize(unittest.TestCase):
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.test_dir)
+
+    def create_file(self, filename, size_bytes):
+        path = os.path.join(self.test_dir, filename)
+        with open(path, "wb") as f:
+            f.seek(size_bytes - 1)
+            f.write(b'\0')
+
+    def test_calculate_average_size(self):
+        # Create 1GB file
+        self.create_file("video1.mkv", 1024 * 1024 * 1024)
+        # Create 2GB file
+        self.create_file("video2.mp4", 2 * 1024 * 1024 * 1024)
+        # Create non-video file (should be ignored)
+        self.create_file("subtitle.srt", 1024 * 1024)
+
+        avg_size = calculate_average_size(self.test_dir)
+
+        # (1 + 2) / 2 = 1.5 GB
+        self.assertAlmostEqual(avg_size, 1.5, places=2)
+
+    def test_empty_folder(self):
+        avg_size = calculate_average_size(self.test_dir)
+        self.assertEqual(avg_size, 0.0)
+
+    def test_no_video_files(self):
+        self.create_file("text.txt", 100)
+        avg_size = calculate_average_size(self.test_dir)
+        self.assertEqual(avg_size, 0.0)
 
 class TestMediaParser(unittest.TestCase):
     def test_parse_root_folder_strict(self):

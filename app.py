@@ -64,7 +64,7 @@ class App(customtkinter.CTk):
         style.map("Treeview.Heading",
                   background=[('active', '#404040')])
 
-        self.columns = ("Name", "Season", "Group", "Resolution", "Source", "Video", "Audio")
+        self.columns = ("Name", "Season", "Group", "Resolution", "Source", "Video", "Audio", "Avg Size (GB)")
         self.tree = ttk.Treeview(self.tree_frame, columns=self.columns, show="headings",
                                  yscrollcommand=self.scrollbar.set, selectmode="browse")
 
@@ -122,7 +122,8 @@ class App(customtkinter.CTk):
         # Insert new items
         for item in items:
             season_str = item.season if item.season else ""
-            values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec)
+            avg_size_str = f"{item.avg_size_gb:6.2f} GB"
+            values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec, avg_size_str)
             tag = get_item_tag(item)
             if tag:
                 self.tree.insert("", "end", values=values, tags=(tag,))
