@@ -13,6 +13,7 @@ class MediaItem:
     audio_codec: str
     season: Optional[str] = None
     path: str = ""
+    is_airing: bool = False
 
     def __post_init__(self):
         # Clean up name if needed
@@ -101,21 +102,31 @@ class MediaParser:
             path=path
         )
 
-        # Apply overrides based on heuristics
-        for tag in tags:
-            if MediaParser.RES_REGEX.search(tag):
-                new_item.resolution = tag
-            elif MediaParser.SOURCE_REGEX.search(tag):
-                new_item.source = tag
-            elif MediaParser.VIDEO_REGEX.search(tag):
-                new_item.video_codec = tag
-            elif MediaParser.AUDIO_REGEX.search(tag):
-                new_item.audio_codec = tag
-            # If nothing matches, it might be Group or just unknown.
-            # We assume Group isn't overridden usually unless it matches nothing else?
-            # Or if it's the first tag and doesn't match others?
-            # User example: Season 03 [WEB-DL][H.264][AAC2.0] -> Source, Video, Audio.
-            # So no group override in example. We'll skip unknown tags or log them.
+        # Check for [Airing]
+        is_airing_tag_found = any(tag.lower() == "airing" for tag in tags)
+
+        if is_airing_tag_found:
+            new_item.is_airing = True
+            new_item.resolution = "Airing"
+            new_item.source = "Airing"
+            new_item.video_codec = "Airing"
+            new_item.audio_codec = "Airing"
+        else:
+            # Apply overrides based on heuristics
+            for tag in tags:
+                if MediaParser.RES_REGEX.search(tag):
+                    new_item.resolution = tag
+                elif MediaParser.SOURCE_REGEX.search(tag):
+                    new_item.source = tag
+                elif MediaParser.VIDEO_REGEX.search(tag):
+                    new_item.video_codec = tag
+                elif MediaParser.AUDIO_REGEX.search(tag):
+                    new_item.audio_codec = tag
+                # If nothing matches, it might be Group or just unknown.
+                # We assume Group isn't overridden usually unless it matches nothing else?
+                # Or if it's the first tag and doesn't match others?
+                # User example: Season 03 [WEB-DL][H.264][AAC2.0] -> Source, Video, Audio.
+                # So no group override in example. We'll skip unknown tags or log them.
 
         return new_item
 
