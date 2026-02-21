@@ -68,7 +68,17 @@ class App(customtkinter.CTk):
 
         # Load Config
         self.config = load_config()
-        self.verified_items = set(self.config.get("verified_items", []))
+        self.item_statuses = self.config.get("media_statuses", {})
+
+        # Migration from legacy list
+        if "verified_items" in self.config and not self.item_statuses:
+             verified_list = self.config.get("verified_items", [])
+             self.item_statuses = {path: "verified" for path in verified_list}
+             # Remove legacy key to avoid confusion later
+             self.config.pop("verified_items", None)
+             # Save migrated config immediately
+             self.config["media_statuses"] = self.item_statuses
+             save_config(self.config)
 
         # Configure grid
         self.grid_columnconfigure(0, weight=1)
@@ -262,8 +272,13 @@ class App(customtkinter.CTk):
             season_str = item.season if item.season else ""
             avg_size_str = f"{item.avg_size_gb:6.2f} GB"
 
-            is_verified = item.path in self.verified_items
-            verified_mark = "☑" if is_verified else "☐"
+            status = self.item_statuses.get(item.path)
+            if status == "verified":
+                verified_mark = "☑"
+            elif status == "rejected":
+                verified_mark = "☒"
+            else:
+                verified_mark = "☐"
 
             values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec, avg_size_str, verified_mark)
             tag = get_item_tag(item)
@@ -291,19 +306,31 @@ class App(customtkinter.CTk):
                 if not path:
                     return
 
-                # Toggle
-                if path in self.verified_items:
-                    self.verified_items.remove(path)
-                    new_val = "☐"
+                # Cycle: None -> verified -> rejected -> None
+                current_status = self.item_statuses.get(path)
+
+                if current_status is None:
+                    new_status = "verified"
+                    new_mark = "☑"
+                elif current_status == "verified":
+                    new_status = "rejected"
+                    new_mark = "☒"
+                else: # rejected
+                    new_status = None
+                    new_mark = "☐"
+
+                # Update State
+                if new_status:
+                    self.item_statuses[path] = new_status
                 else:
-                    self.verified_items.add(path)
-                    new_val = "☑"
+                    # Remove from dict if None to keep it clean
+                    self.item_statuses.pop(path, None)
 
                 # Update UI
-                self.tree.set(row_id, "Verified", new_val)
+                self.tree.set(row_id, "Verified", new_mark)
 
                 # Save Config
-                self.config["verified_items"] = list(self.verified_items)
+                self.config["media_statuses"] = self.item_statuses
                 save_config(self.config)
 
 def get_item_tag(item: MediaItem) -> str:
