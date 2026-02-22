@@ -155,7 +155,7 @@ class App(customtkinter.CTk):
             self.tree.column(col, width=120, anchor="w")
 
         # Bind Right Click for secondary sort
-        self.tree.bind("<Button-3>", self.on_header_right_click)
+        self.tree.bind("<Button-3>", self.on_right_click)
         # Bind Left Click for checkboxes
         self.tree.bind("<Button-1>", self.on_tree_click)
 
@@ -201,7 +201,7 @@ class App(customtkinter.CTk):
         self.primary_sort_col = (col, reverse)
         self.perform_sort()
 
-    def on_header_right_click(self, event):
+    def on_right_click(self, event):
         region = self.tree.identify_region(event.x, event.y)
         if region == "heading":
             col_id = self.tree.identify_column(event.x)
@@ -216,6 +216,46 @@ class App(customtkinter.CTk):
 
             self.secondary_sort_col = (col_name, reverse)
             self.perform_sort()
+
+        elif region == "cell":
+            col_id = self.tree.identify_column(event.x)
+            col_name = self.tree.column(col_id, "id")
+
+            if col_name == "Verified":
+                row_id = self.tree.identify_row(event.y)
+                if not row_id:
+                    return
+
+                path = self.row_id_to_path.get(row_id)
+                if not path:
+                    return
+
+                # Cycle (Reverse): None -> rejected -> verified -> None
+                current_status = self.item_statuses.get(path)
+
+                if current_status is None:
+                    new_status = "rejected"
+                    new_mark = "☒"
+                elif current_status == "rejected":
+                    new_status = "verified"
+                    new_mark = "☑"
+                else: # verified
+                    new_status = None
+                    new_mark = "☐"
+
+                # Update State
+                if new_status:
+                    self.item_statuses[path] = new_status
+                else:
+                    # Remove from dict if None to keep it clean
+                    self.item_statuses.pop(path, None)
+
+                # Update UI
+                self.tree.set(row_id, "Verified", new_mark)
+
+                # Save Config
+                self.config["media_statuses"] = self.item_statuses
+                save_config(self.config)
 
     def perform_sort(self):
         item_ids = self.tree.get_children('')
