@@ -144,10 +144,10 @@ class App(customtkinter.CTk):
             self.tree.heading(col, text=col, command=lambda c=col: self.on_header_click(c))
             self.tree.column(col, width=120, anchor="w")
 
-        # Bind Right Click for secondary sort
-        self.tree.bind("<Button-3>", self.on_header_right_click)
-        # Bind Left Click for checkboxes
-        self.tree.bind("<Button-1>", self.on_tree_click)
+        # Bind Right Click for secondary sort and un-verifying
+        self.tree.bind("<Button-3>", self.on_right_click)
+        # Bind Left Click for verifying
+        self.tree.bind("<Button-1>", self.on_left_click)
 
         self.tree.column("Name", width=300)
         self.tree.column("Season", width=100)
@@ -191,7 +191,7 @@ class App(customtkinter.CTk):
         self.primary_sort_col = (col, reverse)
         self.perform_sort()
 
-    def on_header_right_click(self, event):
+    def on_right_click(self, event):
         region = self.tree.identify_region(event.x, event.y)
         if region == "heading":
             col_id = self.tree.identify_column(event.x)
@@ -206,6 +206,27 @@ class App(customtkinter.CTk):
 
             self.secondary_sort_col = (col_name, reverse)
             self.perform_sort()
+        elif region == "cell":
+            col_id = self.tree.identify_column(event.x)
+            col_name = self.tree.column(col_id, "id")
+
+            if col_name == "Verified":
+                row_id = self.tree.identify_row(event.y)
+                if not row_id:
+                    return
+
+                path = self.row_id_to_path.get(row_id)
+                if not path:
+                    return
+
+                # Right click -> Unverify (X/Empty Box)
+                if path in self.verified_items:
+                    self.verified_items.remove(path)
+                    # Update UI
+                    self.tree.set(row_id, "Verified", "☐")
+                    # Save Config
+                    self.config["verified_items"] = list(self.verified_items)
+                    save_config(self.config)
 
     def perform_sort(self):
         item_ids = self.tree.get_children('')
@@ -276,7 +297,7 @@ class App(customtkinter.CTk):
 
         self.status_label.configure(text=f"Scan complete. Found {len(items)} items.")
 
-    def on_tree_click(self, event):
+    def on_left_click(self, event):
         region = self.tree.identify_region(event.x, event.y)
         if region == "cell":
             col_id = self.tree.identify_column(event.x)
@@ -291,20 +312,14 @@ class App(customtkinter.CTk):
                 if not path:
                     return
 
-                # Toggle
-                if path in self.verified_items:
-                    self.verified_items.remove(path)
-                    new_val = "☐"
-                else:
+                # Left click -> Verify (Check Mark)
+                if path not in self.verified_items:
                     self.verified_items.add(path)
-                    new_val = "☑"
-
-                # Update UI
-                self.tree.set(row_id, "Verified", new_val)
-
-                # Save Config
-                self.config["verified_items"] = list(self.verified_items)
-                save_config(self.config)
+                    # Update UI
+                    self.tree.set(row_id, "Verified", "☑")
+                    # Save Config
+                    self.config["verified_items"] = list(self.verified_items)
+                    save_config(self.config)
 
 def get_item_tag(item: MediaItem) -> str:
     if item.is_airing:
