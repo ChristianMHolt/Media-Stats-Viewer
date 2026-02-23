@@ -5,6 +5,7 @@ import customtkinter
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from media_library import LibraryScanner, MediaItem
+from PIL import Image
 
 CONFIG_FILE = "config.json"
 
@@ -65,6 +66,28 @@ class App(customtkinter.CTk):
         super().__init__()
         self.title("Media Library Tracker")
         self.geometry("1100x600")
+
+        # Set Icon
+        try:
+            icon_path = os.path.join("assets", "icon.png")
+            if os.path.exists(icon_path):
+                icon_image = tk.PhotoImage(file=icon_path)
+                self.iconphoto(True, icon_image)
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
+
+        # Set Background / Border
+        try:
+            bg_path = os.path.join("assets", "border_bg.png")
+            if os.path.exists(bg_path):
+                pil_image = Image.open(bg_path)
+                self.bg_image = customtkinter.CTkImage(light_image=pil_image, dark_image=pil_image, size=(1100, 600))
+
+                self.bg_label = customtkinter.CTkLabel(self, image=self.bg_image, text="")
+                self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+                self.bg_label.lower()
+        except Exception as e:
+            print(f"Failed to load background: {e}")
 
         self.all_items = []
 
