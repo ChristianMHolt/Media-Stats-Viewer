@@ -66,6 +66,8 @@ class App(customtkinter.CTk):
         self.title("Media Library Tracker")
         self.geometry("1100x600")
 
+        self.all_items = []
+
         # Load Config
         self.config = load_config()
         self.item_statuses = self.config.get("media_statuses", {})
@@ -101,6 +103,12 @@ class App(customtkinter.CTk):
 
         self.status_label = customtkinter.CTkLabel(self.top_frame, text="Ready to scan.")
         self.status_label.pack(side="left", padx=10)
+
+        # Search Bar
+        self.search_var = customtkinter.StringVar()
+        self.search_entry = customtkinter.CTkEntry(self.top_frame, placeholder_text="Search...", width=200, textvariable=self.search_var)
+        self.search_entry.pack(side="right", padx=10)
+        self.search_entry.bind("<KeyRelease>", self.on_search)
 
         # Sorting State
         self.primary_sort_col = None
@@ -300,7 +308,34 @@ class App(customtkinter.CTk):
         except Exception as e:
             self.after(0, lambda: self.status_label.configure(text=f"Error: {e}"))
 
+    def on_search(self, event):
+        self.refresh_tree()
+
+    def refresh_tree(self):
+        search_text = self.search_var.get().lower()
+        if not search_text:
+            self.populate_tree(self.all_items)
+            return
+
+        filtered_items = []
+        for item in self.all_items:
+            if (search_text in item.name.lower() or
+                search_text in item.group.lower() or
+                search_text in item.resolution.lower() or
+                search_text in item.source.lower() or
+                search_text in item.video_codec.lower() or
+                search_text in item.audio_codec.lower() or
+                (item.season and search_text in item.season.lower())):
+                filtered_items.append(item)
+
+        self.populate_tree(filtered_items)
+
     def update_table(self, items):
+        self.all_items = items
+        self.status_label.configure(text=f"Scan complete. Found {len(items)} items.")
+        self.refresh_tree()
+
+    def populate_tree(self, items):
         # Clear existing
         for item in self.tree.get_children():
             self.tree.delete(item)
@@ -329,7 +364,7 @@ class App(customtkinter.CTk):
 
             self.row_id_to_path[item_id] = item.path
 
-        self.status_label.configure(text=f"Scan complete. Found {len(items)} items.")
+        self.perform_sort()
 
     def on_tree_click(self, event):
         region = self.tree.identify_region(event.x, event.y)
