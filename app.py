@@ -356,7 +356,7 @@ class App(customtkinter.CTk):
                 verified_mark = "☐"
 
             values = (item.name, season_str, item.group, item.resolution, item.source, item.video_codec, item.audio_codec, avg_size_str, verified_mark)
-            tag = get_item_tag(item)
+            tag = get_item_tag(item, status)
             if tag:
                 item_id = self.tree.insert("", "end", values=values, tags=(tag,))
             else:
@@ -404,31 +404,53 @@ class App(customtkinter.CTk):
                 # Update UI
                 self.tree.set(row_id, "Verified", new_mark)
 
+                # Update row color
+                item_obj = None
+                for item in self.all_items:
+                    if item.path == path:
+                        item_obj = item
+                        break
+
+                if item_obj:
+                    new_tag = get_item_tag(item_obj, new_status)
+                    self.tree.item(row_id, tags=(new_tag,))
+
                 # Save Config
                 self.config["media_statuses"] = self.item_statuses
                 save_config(self.config)
 
-def get_item_tag(item: MediaItem) -> str:
+def get_item_tag(item: MediaItem, status: str = None) -> str:
+    # If status is rejected, it goes to Bad / Red
+    if status == "rejected":
+        return "red"
+
+    # Base tag calculation
+    tag = ""
     if item.is_airing:
-        return "blue"
+        tag = "blue"
+    else:
+        source_norm = item.source.lower().replace("-", " ")
+        video_norm = item.video_codec.lower().replace("-", " ")
 
-    source_norm = item.source.lower().replace("-", " ")
-    video_norm = item.video_codec.lower().replace("-", " ")
-
-    if "web dl" in source_norm:
-            return "red"
-
-    if "bd encode" in source_norm:
-        if "svt av1" in video_norm:
-            return "light_green"
-        else:
-            return "orange"
-
-    if "bd remux" in source_norm or "dvd" in source_norm:
+        if "web dl" in source_norm:
+            tag = "red"
+        elif "bd encode" in source_norm:
+            if "svt av1" in video_norm:
+                tag = "light_green"
+            else:
+                tag = "orange"
+        elif "bd remux" in source_norm or "dvd" in source_norm:
             if "h.264" in video_norm or "x264" in video_norm or "mpeg2" in video_norm or "mpeg 2" in video_norm:
-                return "green"
+                tag = "green"
 
-    return ""
+    # If verified, promote to Good / Light Green unless already Great / Green
+    if status == "verified":
+        if tag == "green":
+            return "green"
+        else:
+            return "light_green"
+
+    return tag
 
 if __name__ == "__main__":
     customtkinter.set_appearance_mode("Dark")
