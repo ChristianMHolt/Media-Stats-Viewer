@@ -6,6 +6,32 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from media_library import LibraryScanner, MediaItem
 
+try:
+    import fast_search
+except ImportError:
+    class SearchEngine:
+        def __init__(self):
+            self.corpus = []
+
+        def add_items(self, items):
+            self.corpus = [item.lower() for item in items]
+
+        def search(self, query):
+            if not query:
+                return []
+            query = query.lower()
+            terms = query.split()
+            indices = []
+            for i, item in enumerate(self.corpus):
+                if all(term in item for term in terms):
+                    indices.append(i)
+            return indices
+
+    # Create a dummy module-like object if needed, but we can just use the class
+    class FastSearchModule:
+        SearchEngine = SearchEngine
+    fast_search = FastSearchModule()
+
 CONFIG_FILE = "config.json"
 
 def load_config():
@@ -101,6 +127,16 @@ class App(customtkinter.CTk):
 
         self.status_label = customtkinter.CTkLabel(self.top_frame, text="Ready to scan.")
         self.status_label.pack(side="left", padx=10)
+
+        # Search Bar
+        self.search_var = customtkinter.StringVar()
+        self.search_entry = customtkinter.CTkEntry(self.top_frame, placeholder_text="Search...", textvariable=self.search_var)
+        self.search_entry.pack(side="left", padx=10, fill="x", expand=True)
+        self.search_entry.bind("<KeyRelease>", self.on_search_key)
+
+        self.search_engine = fast_search.SearchEngine()
+        self.all_media_items = []
+        self.search_timer = None
 
         # Sorting State
         self.primary_sort_col = None
@@ -295,10 +331,45 @@ class App(customtkinter.CTk):
         try:
             scanner = LibraryScanner(path)
             items = scanner.scan()
+
+            # Store all items and populate search engine
+            self.all_media_items = items
+            search_corpus = []
+            for item in items:
+                parts = [
+                    item.name,
+                    item.group,
+                    item.resolution,
+                    item.source,
+                    item.video_codec,
+                    item.audio_codec,
+                    item.season or ""
+                ]
+                search_corpus.append(" ".join(parts))
+
+            self.search_engine.add_items(search_corpus)
+
             # Update UI on main thread
             self.after(0, lambda: self.update_table(items))
         except Exception as e:
             self.after(0, lambda: self.status_label.configure(text=f"Error: {e}"))
+
+    def on_search_key(self, event):
+        if self.search_timer:
+            self.after_cancel(self.search_timer)
+        self.search_timer = self.after(100, self.perform_search)
+
+    def perform_search(self):
+        query = self.search_var.get()
+        if not query:
+            self.update_table(self.all_media_items)
+            return
+
+        indices = self.search_engine.search(query)
+        # Limit to 100 results
+        limited_indices = indices[:100]
+        results = [self.all_media_items[i] for i in limited_indices]
+        self.update_table(results)
 
     def update_table(self, items):
         # Clear existing
