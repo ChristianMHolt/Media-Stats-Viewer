@@ -83,6 +83,7 @@ class App(customtkinter.CTk):
         self.current_bg_width = 0
         self.current_bg_height = 0
         self.pil_bg_image = None
+        self.bg_image = None
 
         try:
             base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -98,23 +99,7 @@ class App(customtkinter.CTk):
 
         # Initial render
         if self.pil_bg_image:
-            self.current_bg_width = 1100
-            self.current_bg_height = 600
-
-            # Crop the image to the aspect ratio
-            cropped_image = ImageOps.fit(self.pil_bg_image, (self.current_bg_width, self.current_bg_height), method=Image.Resampling.BILINEAR)
-
-            # Draw the border
-            draw = ImageDraw.Draw(cropped_image)
-            # Draw a rectangle with width 20.
-            # (0, 0) to (width-1, height-1) draws the border inside the image.
-            draw.rectangle([(0, 0), (self.current_bg_width - 1, self.current_bg_height - 1)], outline="#1f6aa5", width=20)
-
-            # Update the label
-            self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
-                                                   dark_image=cropped_image,
-                                                   size=(self.current_bg_width, self.current_bg_height))
-            self.bg_image_label.configure(image=self.bg_image)
+            self.update_background_image(1100, 600)
 
         # Transparent main container
         self.main_container = customtkinter.CTkFrame(
@@ -149,7 +134,7 @@ class App(customtkinter.CTk):
 
         # --- Top Frame ---
         self.top_frame = customtkinter.CTkFrame(self.main_container)
-        self.top_frame.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
+        self.top_frame.grid(row=0, column=0, padx=25, pady=25, sticky="ew")
 
         self.btn_select = customtkinter.CTkButton(self.top_frame, text="Select Library Folder", command=self.select_folder)
         self.btn_select.pack(side="left", padx=10, pady=10)
@@ -177,7 +162,7 @@ class App(customtkinter.CTk):
 
         # --- Treeview Frame ---
         self.tree_frame = customtkinter.CTkFrame(self.main_container)
-        self.tree_frame.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
+        self.tree_frame.grid(row=1, column=0, padx=25, pady=(0, 25), sticky="nsew")
 
         # Treeview Scrollbar
         self.scrollbar = customtkinter.CTkScrollbar(self.tree_frame)
@@ -252,30 +237,33 @@ class App(customtkinter.CTk):
     def resize_background(self, event):
         if event.widget == self:
             if event.width > 10 and event.height > 10:
-                # Check if size actually changed
-                if event.width == self.current_bg_width and event.height == self.current_bg_height:
-                    return
+                self.update_background_image(event.width, event.height)
 
-                self.current_bg_width = event.width
-                self.current_bg_height = event.height
+    def update_background_image(self, width, height):
+        if not self.pil_bg_image:
+            return
 
-                # Crop the image to the aspect ratio
-                new_width = event.width
-                new_height = event.height
+        # Check if size actually changed
+        if width == self.current_bg_width and height == self.current_bg_height and self.bg_image:
+            return
 
-                cropped_image = ImageOps.fit(self.pil_bg_image, (new_width, new_height), method=Image.Resampling.BILINEAR)
+        self.current_bg_width = width
+        self.current_bg_height = height
 
-                # Draw the border
-                draw = ImageDraw.Draw(cropped_image)
-                # Draw a rectangle with width 20.
-                # (0, 0) to (width-1, height-1) draws the border inside the image.
-                draw.rectangle([(0, 0), (new_width - 1, new_height - 1)], outline="#1f6aa5", width=20)
+        # Crop the image to the aspect ratio
+        cropped_image = ImageOps.fit(self.pil_bg_image, (width, height), method=Image.Resampling.BILINEAR)
 
-                # Update the label
-                self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
-                                                       dark_image=cropped_image,
-                                                       size=(new_width, new_height))
-                self.bg_image_label.configure(image=self.bg_image)
+        # Draw the border
+        draw = ImageDraw.Draw(cropped_image)
+        # Draw a rectangle with width 20.
+        # (0, 0) to (width-1, height-1) draws the border inside the image.
+        draw.rectangle([(0, 0), (width - 1, height - 1)], outline="#1f6aa5", width=20)
+
+        # Update the label
+        self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
+                                               dark_image=cropped_image,
+                                               size=(width, height))
+        self.bg_image_label.configure(image=self.bg_image)
 
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
