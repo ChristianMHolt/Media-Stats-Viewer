@@ -4,7 +4,6 @@ import json
 import customtkinter
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-from PIL import Image, ImageOps, ImageDraw
 from media_library import LibraryScanner, MediaItem
 CONFIG_FILE = "config.json"
 
@@ -79,38 +78,13 @@ class App(customtkinter.CTk):
         except Exception as e:
             print(f"Failed to load icon: {e}")
 
-        # Set Background / Border
-        self.current_bg_width = 0
-        self.current_bg_height = 0
-        self.pil_bg_image = None
-        self.bg_image = None
-
-        try:
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-            bg_path = os.path.join(base_dir, "assets", "border_bg.png")
-            self.pil_bg_image = Image.open(bg_path)
-        except Exception as e:
-            print(f"Failed to load background image: {e}")
-
-        # Create a label for the background image
-        self.bg_image_label = customtkinter.CTkLabel(self, text="")
-        self.bg_image_label.place(x=0, y=0, relwidth=1, relheight=1)
-        self.bg_image_label.lower()
-
-        # Initial render
-        if self.pil_bg_image:
-            self.update_background_image(1100, 600)
-
         # Transparent main container
         self.main_container = customtkinter.CTkFrame(
             self,
             fg_color="transparent",
             corner_radius=0
         )
-        self.main_container.pack(fill="both", expand=True, padx=25, pady=25)
-
-        # Bind resize event
-        self.bind("<Configure>", self.resize_background)
+        self.main_container.pack(fill="both", expand=True)
 
         self.all_items = []
 
@@ -234,39 +208,6 @@ class App(customtkinter.CTk):
             thread = threading.Thread(target=self.run_scan, args=(last_lib,))
             thread.start()
 
-    def resize_background(self, event):
-        if event.widget == self:
-            if event.width > 10 and event.height > 10:
-                self.update_background_image(event.width, event.height)
-
-    def update_background_image(self, width, height):
-        if not self.pil_bg_image:
-            return
-
-        # Check if size actually changed
-        if width == self.current_bg_width and height == self.current_bg_height and self.bg_image:
-            return
-
-        self.current_bg_width = width
-        self.current_bg_height = height
-
-        try:
-            # Crop the image to the aspect ratio
-            cropped_image = ImageOps.fit(self.pil_bg_image, (width, height), method=Image.Resampling.BILINEAR)
-
-            # Draw the border
-            draw = ImageDraw.Draw(cropped_image)
-            # Draw a rectangle with width 20.
-            # (0, 0) to (width-1, height-1) draws the border inside the image.
-            draw.rectangle([(0, 0), (width - 1, height - 1)], outline="#1f6aa5", width=20)
-
-            # Update the label
-            self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
-                                                   dark_image=cropped_image,
-                                                   size=(width, height))
-            self.bg_image_label.configure(image=self.bg_image)
-        except Exception as e:
-            print(f"Error updating background: {e}")
 
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
