@@ -51,7 +51,7 @@ class MediaParser:
     RES_REGEX = re.compile(r'(\d{3,4}p|4K|2K|8K)', re.IGNORECASE)
     SOURCE_REGEX = re.compile(r'(BD[- ]?Encode|WEB[- ]?DL|BluRay|HDTV|DVD|Remux)', re.IGNORECASE)
     VIDEO_REGEX = re.compile(r'(H\.?264|x264|H\.?265|x265|HEVC|AV1|SVT[- ]?AV1|VP9)', re.IGNORECASE)
-    AUDIO_REGEX = re.compile(r'(AAC|DTS|FLAC|OPUS|AC3|E-AC3|TrueHD|Atmos)', re.IGNORECASE)
+    AUDIO_REGEX = re.compile(r'(AAC|DTS|FLAC|OPUS|AC3|E-AC3|TrueHD|Atmos|DDP)', re.IGNORECASE)
 
     @staticmethod
     def parse_root_folder(folder_name: str, path: str) -> Optional[MediaItem]:
