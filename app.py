@@ -4,6 +4,7 @@ import json
 import customtkinter
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from PIL import Image, ImageOps, ImageDraw
 from media_library import LibraryScanner, MediaItem
 CONFIG_FILE = "config.json"
 
@@ -79,14 +80,24 @@ class App(customtkinter.CTk):
             print(f"Failed to load icon: {e}")
 
         # Set Background / Border
+        # Load the 4K border image
+        self.pil_bg_image = Image.open(os.path.join("assets", "border_bg.png"))
+
+        # Create a label for the background image
+        self.bg_image_label = customtkinter.CTkLabel(self, text="")
+        self.bg_image_label.place(x=0, y=0, relwidth=1, relheight=1)
+        self.bg_image_label.lower()
+
+        # Transparent main container
         self.main_container = customtkinter.CTkFrame(
             self,
-            fg_color="#343638",
-            border_width=20,
-            border_color="#1f6aa5",
+            fg_color="transparent",
             corner_radius=0
         )
         self.main_container.pack(fill="both", expand=True)
+
+        # Bind resize event
+        self.bind("<Configure>", self.resize_background)
 
         self.all_items = []
 
@@ -209,6 +220,27 @@ class App(customtkinter.CTk):
             self.status_label.configure(text=f"Scanning: {last_lib}...")
             thread = threading.Thread(target=self.run_scan, args=(last_lib,))
             thread.start()
+
+    def resize_background(self, event):
+        if event.widget == self:
+            if event.width > 10 and event.height > 10:
+                # Crop the image to the aspect ratio
+                new_width = event.width
+                new_height = event.height
+
+                cropped_image = ImageOps.fit(self.pil_bg_image, (new_width, new_height), method=Image.Resampling.LANCZOS)
+
+                # Draw the border
+                draw = ImageDraw.Draw(cropped_image)
+                # Draw a rectangle with width 20.
+                # (0, 0) to (width-1, height-1) draws the border inside the image.
+                draw.rectangle([(0, 0), (new_width - 1, new_height - 1)], outline="#1f6aa5", width=20)
+
+                # Update the label
+                self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
+                                                       dark_image=cropped_image,
+                                                       size=(new_width, new_height))
+                self.bg_image_label.configure(image=self.bg_image)
 
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
