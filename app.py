@@ -211,6 +211,15 @@ class App(customtkinter.CTk):
             thread = threading.Thread(target=self.run_scan, args=(last_lib,))
             thread.start()
 
+        # Bind resize event
+        self.bind("<Configure>", self.on_resize)
+
+    def on_resize(self, event):
+        if event.widget == self:
+            # Update background image size
+            if hasattr(self, 'bg_image'):
+                self.bg_image.configure(size=(event.width, event.height))
+
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
             self.primary_sort_col = ("Status", False) # False = Ascending rank (1 to 6)
