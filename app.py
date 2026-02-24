@@ -69,10 +69,14 @@ class App(customtkinter.CTk):
 
         # Set Icon
         try:
-            icon_path = os.path.join("assets", "icon.png")
+            # Get the absolute path for the running script/executable
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(base_dir, "assets", "icon.ico")
+            
             if os.path.exists(icon_path):
-                icon_image = tk.PhotoImage(file=icon_path)
-                self.iconphoto(True, icon_image)
+                self.iconbitmap(icon_path)
+            else:
+                print("Icon file not found at:", icon_path)
         except Exception as e:
             print(f"Failed to load icon: {e}")
 
