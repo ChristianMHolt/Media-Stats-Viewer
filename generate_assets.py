@@ -24,9 +24,9 @@ def create_border():
     # A simple border pattern.
     # Let's make a 100x100 tileable pattern or a large frame.
     # Since window size is dynamic, a large image or resizing is needed.
-    # I'll make a 1920x1080 abstract background.
+    # I'll make a 4K abstract background.
 
-    width, height = 1920, 1080
+    width, height = 3840, 2160
     img = Image.new('RGB', (width, height), "#2b2b2b")
     draw = ImageDraw.Draw(img)
 
