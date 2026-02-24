@@ -149,6 +149,8 @@ class MediaParser:
                     new_item.video_codec = tag
                 elif MediaParser.AUDIO_REGEX.search(tag):
                     new_item.audio_codec = tag
+                else:
+                    new_item.group = tag
                 # If nothing matches, it might be Group or just unknown.
                 # We assume Group isn't overridden usually unless it matches nothing else?
                 # Or if it's the first tag and doesn't match others?
