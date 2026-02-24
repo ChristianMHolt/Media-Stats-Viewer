@@ -80,13 +80,41 @@ class App(customtkinter.CTk):
             print(f"Failed to load icon: {e}")
 
         # Set Background / Border
-        # Load the 4K border image
-        self.pil_bg_image = Image.open(os.path.join("assets", "border_bg.png"))
+        self.current_bg_width = 0
+        self.current_bg_height = 0
+        self.pil_bg_image = None
+
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            bg_path = os.path.join(base_dir, "assets", "border_bg.png")
+            self.pil_bg_image = Image.open(bg_path)
+        except Exception as e:
+            print(f"Failed to load background image: {e}")
 
         # Create a label for the background image
         self.bg_image_label = customtkinter.CTkLabel(self, text="")
         self.bg_image_label.place(x=0, y=0, relwidth=1, relheight=1)
         self.bg_image_label.lower()
+
+        # Initial render
+        if self.pil_bg_image:
+            self.current_bg_width = 1100
+            self.current_bg_height = 600
+
+            # Crop the image to the aspect ratio
+            cropped_image = ImageOps.fit(self.pil_bg_image, (self.current_bg_width, self.current_bg_height), method=Image.Resampling.BILINEAR)
+
+            # Draw the border
+            draw = ImageDraw.Draw(cropped_image)
+            # Draw a rectangle with width 20.
+            # (0, 0) to (width-1, height-1) draws the border inside the image.
+            draw.rectangle([(0, 0), (self.current_bg_width - 1, self.current_bg_height - 1)], outline="#1f6aa5", width=20)
+
+            # Update the label
+            self.bg_image = customtkinter.CTkImage(light_image=cropped_image,
+                                                   dark_image=cropped_image,
+                                                   size=(self.current_bg_width, self.current_bg_height))
+            self.bg_image_label.configure(image=self.bg_image)
 
         # Transparent main container
         self.main_container = customtkinter.CTkFrame(
@@ -224,11 +252,18 @@ class App(customtkinter.CTk):
     def resize_background(self, event):
         if event.widget == self:
             if event.width > 10 and event.height > 10:
+                # Check if size actually changed
+                if event.width == self.current_bg_width and event.height == self.current_bg_height:
+                    return
+
+                self.current_bg_width = event.width
+                self.current_bg_height = event.height
+
                 # Crop the image to the aspect ratio
                 new_width = event.width
                 new_height = event.height
 
-                cropped_image = ImageOps.fit(self.pil_bg_image, (new_width, new_height), method=Image.Resampling.LANCZOS)
+                cropped_image = ImageOps.fit(self.pil_bg_image, (new_width, new_height), method=Image.Resampling.BILINEAR)
 
                 # Draw the border
                 draw = ImageDraw.Draw(cropped_image)
