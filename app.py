@@ -5,8 +5,6 @@ import customtkinter
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from media_library import LibraryScanner, MediaItem
-from PIL import Image
-
 CONFIG_FILE = "config.json"
 
 def load_config():
@@ -81,17 +79,14 @@ class App(customtkinter.CTk):
             print(f"Failed to load icon: {e}")
 
         # Set Background / Border
-        try:
-            bg_path = os.path.join("assets", "border_bg.png")
-            if os.path.exists(bg_path):
-                pil_image = Image.open(bg_path)
-                self.bg_image = customtkinter.CTkImage(light_image=pil_image, dark_image=pil_image, size=(1100, 600))
-
-                self.bg_label = customtkinter.CTkLabel(self, image=self.bg_image, text="")
-                self.bg_label.place(x=0, y=0, relwidth=1, relheight=1)
-                self.bg_label.lower()
-        except Exception as e:
-            print(f"Failed to load background: {e}")
+        self.main_container = customtkinter.CTkFrame(
+            self,
+            fg_color="#343638",
+            border_width=20,
+            border_color="#1f6aa5",
+            corner_radius=0
+        )
+        self.main_container.pack(fill="both", expand=True)
 
         self.all_items = []
 
@@ -110,11 +105,11 @@ class App(customtkinter.CTk):
              save_config(self.config)
 
         # Configure grid
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.main_container.grid_columnconfigure(0, weight=1)
+        self.main_container.grid_rowconfigure(1, weight=1)
 
         # --- Top Frame ---
-        self.top_frame = customtkinter.CTkFrame(self)
+        self.top_frame = customtkinter.CTkFrame(self.main_container)
         self.top_frame.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
 
         self.btn_select = customtkinter.CTkButton(self.top_frame, text="Select Library Folder", command=self.select_folder)
@@ -142,7 +137,7 @@ class App(customtkinter.CTk):
         self.secondary_sort_col = None
 
         # --- Treeview Frame ---
-        self.tree_frame = customtkinter.CTkFrame(self)
+        self.tree_frame = customtkinter.CTkFrame(self.main_container)
         self.tree_frame.grid(row=1, column=0, padx=20, pady=(0, 20), sticky="nsew")
 
         # Treeview Scrollbar
@@ -214,15 +209,6 @@ class App(customtkinter.CTk):
             self.status_label.configure(text=f"Scanning: {last_lib}...")
             thread = threading.Thread(target=self.run_scan, args=(last_lib,))
             thread.start()
-
-        # Bind resize event
-        self.bind("<Configure>", self.on_resize)
-
-    def on_resize(self, event):
-        if event.widget == self:
-            # Update background image size
-            if hasattr(self, 'bg_image'):
-                self.bg_image.configure(size=(event.width, event.height))
 
     def on_status_sort_change(self, choice):
         if choice == "Status: Best -> Worst":
