@@ -133,7 +133,8 @@ class MediaParser:
             video_codec=parent_item.video_codec,
             audio_codec=parent_item.audio_codec,
             season=season_name,
-            path=path
+            path=path,
+            is_airing=parent_item.is_airing
         )
 
         # Check for [Airing]
