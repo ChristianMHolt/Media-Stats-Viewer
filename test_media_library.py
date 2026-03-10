@@ -130,5 +130,15 @@ class TestMediaParser(unittest.TestCase):
         self.assertEqual(item.video_codec, "Airing")
         self.assertEqual(item.audio_codec, "Airing")
 
+    def test_season_override_inherits_airing(self):
+        parent = MediaItem("Show", "Group", "1080p", "Airing", "H.264", "AAC", is_airing=True)
+        season_folder = "Season 01"
+        path = "/test/path/season01"
+
+        item = MediaParser.parse_season_override(season_folder, parent, path)
+
+        self.assertEqual(item.season, "Season 01")
+        self.assertTrue(item.is_airing)
+
 if __name__ == '__main__':
     unittest.main()
