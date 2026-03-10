@@ -178,32 +178,34 @@ class LibraryScanner:
 
         # Iterate only top level directories first
         try:
-            for entry in os.scandir(self.root_path):
-                if entry.is_dir():
-                    # Parse as a potential show/movie
-                    parent_item = MediaParser.parse_root_folder(entry.name, entry.path)
+            with os.scandir(self.root_path) as root_entries:
+                for entry in root_entries:
+                    if entry.is_dir():
+                        # Parse as a potential show/movie
+                        parent_item = MediaParser.parse_root_folder(entry.name, entry.path)
 
-                    # Check for seasons
-                    has_seasons = False
-                    try:
-                        sub_entries = list(os.scandir(entry.path))
-                        # Sort to ensure consistent order (optional)
-                        sub_entries.sort(key=lambda x: x.name)
+                        # Check for seasons
+                        has_seasons = False
+                        try:
+                            with os.scandir(entry.path) as sub_entries_iter:
+                                sub_entries = list(sub_entries_iter)
+                            # Sort to ensure consistent order (optional)
+                            sub_entries.sort(key=lambda x: x.name)
 
-                        for sub in sub_entries:
-                            if sub.is_dir() and sub.name.lower().startswith("season"):
-                                has_seasons = True
-                                season_item = MediaParser.parse_season_override(sub.name, parent_item, sub.path)
-                                season_item.avg_size_gb = calculate_average_size(season_item.path)
-                                items.append(season_item)
-                    except OSError:
-                        pass # Permission issue or not a dir
+                            for sub in sub_entries:
+                                if sub.is_dir() and sub.name.lower().startswith("season"):
+                                    has_seasons = True
+                                    season_item = MediaParser.parse_season_override(sub.name, parent_item, sub.path)
+                                    season_item.avg_size_gb = calculate_average_size(season_item.path)
+                                    items.append(season_item)
+                        except OSError:
+                            pass # Permission issue or not a dir
 
-                    # If no seasons found, add the parent item itself as the entry (Movie or Show without season folders)
-                    if not has_seasons:
-                        # Only add if it's not empty? Or assume valid?
-                        parent_item.avg_size_gb = calculate_average_size(parent_item.path)
-                        items.append(parent_item)
+                        # If no seasons found, add the parent item itself as the entry (Movie or Show without season folders)
+                        if not has_seasons:
+                            # Only add if it's not empty? Or assume valid?
+                            parent_item.avg_size_gb = calculate_average_size(parent_item.path)
+                            items.append(parent_item)
 
         except OSError as e:
             print(f"Error scanning directory: {e}")
