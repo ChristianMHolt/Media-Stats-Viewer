@@ -64,6 +64,19 @@ class TestMediaParser(unittest.TestCase):
         self.assertEqual(item.video_codec, "H.264")
         self.assertEqual(item.audio_codec, "DTS-HD&AAC2.0")
 
+    def test_parse_root_folder_airing(self):
+        folder = "Easygoing Territory Defense by the Optimistic Lord [Multiple][1080p][Airing][H.264][AAC2.0]"
+        path = "/test/path3"
+        item = MediaParser.parse_root_folder(folder, path)
+
+        self.assertEqual(item.name, "Easygoing Territory Defense by the Optimistic Lord")
+        self.assertEqual(item.group, "Multiple")
+        self.assertTrue(item.is_airing)
+        self.assertEqual(item.resolution, "1080p")
+        self.assertEqual(item.source, "Airing")
+        self.assertEqual(item.video_codec, "H.264")
+        self.assertEqual(item.audio_codec, "AAC2.0")
+
     def test_parse_season_override_full(self):
         parent = MediaItem("Show", "Group", "1080p", "BD", "H.265", "AC3")
         season_folder = "Season 03 [WEB-DL][H.264][AAC2.0]"

@@ -78,6 +78,8 @@ class MediaParser:
             # Find all matches of content inside []
             tags = re.findall(r'\[(.*?)\]', bracket_content)
 
+            is_airing_tag_found = any(tag.lower() == "airing" for tag in tags)
+
             if len(tags) >= 5:
                 # Assume strict order
                 group = tags[0]
@@ -85,7 +87,6 @@ class MediaParser:
                 source = tags[2]
                 video_codec = tags[3]
                 audio_codec = tags[4]
-                return MediaItem(name, group, resolution, source, video_codec, audio_codec, path=path)
             else:
                 # If fewer tags, maybe use heuristics or fill sequentially?
                 # The user implied strict format. If fewer, we might map what we have or leave empty.
@@ -96,7 +97,13 @@ class MediaParser:
                 source = tags[2] if len(tags) > 2 else ""
                 video_codec = tags[3] if len(tags) > 3 else ""
                 audio_codec = tags[4] if len(tags) > 4 else ""
-                return MediaItem(name, group, resolution, source, video_codec, audio_codec, path=path)
+
+            item = MediaItem(name, group, resolution, source, video_codec, audio_codec, path=path)
+
+            if is_airing_tag_found:
+                item.is_airing = True
+
+            return item
         except Exception as e:
             print(f"Error parsing {folder_name}: {e}")
             return MediaItem(name=folder_name, group="", resolution="", source="", video_codec="", audio_codec="", path=path)
